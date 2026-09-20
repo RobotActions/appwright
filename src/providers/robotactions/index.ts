@@ -9,6 +9,8 @@ import {
   RobotActionsConfig,
 } from "../../types";
 import { FullProject } from "@playwright/test";
+// @ts-ignore ts not able to identify the import is just an interface
+import { Client as WebDriverClient } from "webdriver";
 import { Device } from "../../device";
 import { logger } from "../../logger";
 import {
@@ -17,7 +19,7 @@ import {
   readGridEnv,
   toGridStatus,
   toWebDriverTarget,
-  validateBuildUrl,
+  validateBuildPath,
 } from "./utils";
 
 type GridVideo = {
@@ -39,27 +41,27 @@ const VIDEO_POLL = { retries: 10, minTimeout: 3_000, maxTimeout: 3_000 };
  */
 export class RobotActionsDeviceProvider implements DeviceProvider {
   sessionId?: string;
+  /**
+   * The session's WebDriver client, once `getDevice()` has run. `Device`
+   * keeps its own copy private; this one is for things Appwright has no
+   * verb for — a TV remote's `mobile: pressButton`, an Android key code.
+   */
+  client?: WebDriverClient;
 
   constructor(
     private project: FullProject<AppwrightConfig>,
     private appBundleId: string | undefined,
-  ) {
-    if (!appBundleId) {
-      throw new Error(
-        "App Bundle ID is required for running tests on RobotActions. Set the `appBundleId` for your projects that run on this provider.",
-      );
-    }
-  }
+  ) {}
 
   async globalSetup() {
     // Fail fast in the main process rather than once per worker.
     readGridEnv();
-    validateBuildUrl(this.project.use.buildPath);
+    validateBuildPath(this.project.use.buildPath);
   }
 
   async getDevice(): Promise<Device> {
     const { gridUrl, token } = readGridEnv();
-    const buildUrl = validateBuildUrl(this.project.use.buildPath);
+    const buildUrl = validateBuildPath(this.project.use.buildPath);
     const platform = this.project.use.platform;
     if (!platform) {
       throw new Error("Platform is not specified in the configuration.");
@@ -79,11 +81,13 @@ export class RobotActionsDeviceProvider implements DeviceProvider {
         platform,
         device: this.project.use.device as RobotActionsConfig,
         buildUrl,
+        appBundleId: this.appBundleId,
         projectName: this.project.name,
       }),
     };
     const WebDriver = (await import("webdriver")).default;
     const webDriverClient = await WebDriver.newSession(config);
+    this.client = webDriverClient;
     this.sessionId = webDriverClient.sessionId;
     return new Device(
       webDriverClient,
@@ -97,12 +101,14 @@ export class RobotActionsDeviceProvider implements DeviceProvider {
     status?: string;
     reason?: string;
     name?: string;
+    testId?: string;
   }) {
     if (!this.sessionId) return;
     const { gridUrl, token } = readGridEnv();
     const status = toGridStatus(details.status);
     const body: Record<string, string> = {};
     if (details.name) body.testName = details.name;
+    if (details.testId) body.testId = details.testId;
     if (status) body.status = status;
     if (status === "failed" && details.reason) body.reason = details.reason;
     if (Object.keys(body).length === 0) return;

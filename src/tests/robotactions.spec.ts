@@ -4,7 +4,7 @@ import {
   readGridEnv,
   toGridStatus,
   toWebDriverTarget,
-  validateBuildUrl,
+  validateBuildPath,
 } from "../providers/robotactions/utils";
 import { DeviceOrientation, Platform } from "../types";
 
@@ -49,12 +49,13 @@ test("toWebDriverTarget fills default ports and keeps a path prefix", () => {
   });
 });
 
-test("validateBuildUrl only accepts http(s) urls", () => {
-  expect(validateBuildUrl("https://ci.example/app.apk")).toBe(
+test("validateBuildPath accepts urls, grid-host paths, or nothing", () => {
+  expect(validateBuildPath("https://ci.example/app.apk")).toBe(
     "https://ci.example/app.apk",
   );
-  expect(() => validateBuildUrl("app-release.apk")).toThrow(/http\(s\) URL/);
-  expect(() => validateBuildUrl(undefined)).toThrow(/Build path not found/);
+  expect(validateBuildPath("/srv/builds/app.apk")).toBe("/srv/builds/app.apk");
+  expect(validateBuildPath(undefined)).toBeUndefined();
+  expect(() => validateBuildPath("app-release.apk")).toThrow(/http\(s\) URL/);
 });
 
 test("buildCapabilities maps config to appium caps", () => {
@@ -95,10 +96,45 @@ test("buildCapabilities omits unset optional fields", () => {
   });
   expect(caps["appium:automationName"]).toBe("uiautomator2");
   expect(caps["appium:appWaitActivity"]).toBe("*");
+  expect(caps["appium:fullReset"]).toBe(true);
   expect(caps["ra:testsuite"]).toBe("Smoke");
   expect(caps).not.toHaveProperty("appium:udid");
   expect(caps).not.toHaveProperty("appium:platformVersion");
   expect(caps).not.toHaveProperty("appium:orientation");
+  expect(caps).not.toHaveProperty("appium:noReset");
+});
+
+test("buildCapabilities without a build is a device-level session", () => {
+  const caps = buildCapabilities({
+    platform: Platform.ANDROID,
+    device: { provider: "robotactions", deviceClass: "TV" },
+    projectName: "androidtv",
+  });
+  expect(caps["appium:noReset"]).toBe(true);
+  expect(caps["appium:deviceClass"]).toBe("TV");
+  expect(caps).not.toHaveProperty("appium:app");
+  expect(caps).not.toHaveProperty("appium:fullReset");
+  expect(caps).not.toHaveProperty("appium:appPackage");
+});
+
+test("buildCapabilities launches a preinstalled app by id when there is no build", () => {
+  const android = buildCapabilities({
+    platform: Platform.ANDROID,
+    device: { provider: "robotactions" },
+    appBundleId: "com.android.settings",
+    projectName: "android",
+  });
+  expect(android["appium:appPackage"]).toBe("com.android.settings");
+  expect(android["appium:appWaitActivity"]).toBe("*");
+  const tv = buildCapabilities({
+    platform: Platform.TVOS,
+    device: { provider: "robotactions" },
+    appBundleId: "com.apple.TVSettings",
+    projectName: "tvos",
+  });
+  expect(tv["platformName"]).toBe("tvOS");
+  expect(tv["appium:automationName"]).toBe("xcuitest");
+  expect(tv["appium:bundleId"]).toBe("com.apple.TVSettings");
 });
 
 test("toGridStatus collapses playwright statuses", () => {

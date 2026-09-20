@@ -69,22 +69,25 @@ export function toWebDriverTarget(gridUrl: string): WebDriverTarget {
 }
 
 /**
- * The grid's Appium nodes download the build themselves, so `buildPath` must be
- * a URL they can reach — a local file on the test runner is not visible to them.
+ * The build under test, or nothing.
+ *
+ * A grid session needs no app: with `buildPath` unset the device is handed
+ * out as-is (`appium:noReset`) — the smoke a fresh project runs, or a suite
+ * that drives a preinstalled app by `appBundleId`. When it is set, the grid's
+ * Appium nodes fetch it themselves, so it must be somewhere they can reach:
+ * an http(s) URL, or an absolute path on the grid host. A path on the test
+ * runner's disk is not visible to them.
  */
-export function validateBuildUrl(buildPath: string | undefined): string {
-  if (!buildPath) {
-    throw new Error(
-      `Build path not found. Please set the build path in appwright.config.ts`,
-    );
-  }
-  if (!/^https?:\/\//i.test(buildPath)) {
-    throw new Error(
-      `The RobotActions provider needs buildPath to be an http(s) URL the grid can download the build from (got "${buildPath}"). ` +
-        `Upload the build to your artifact store (CI artifact, S3 presigned URL, …) and use that URL.`,
-    );
-  }
-  return buildPath;
+export function validateBuildPath(
+  buildPath: string | undefined,
+): string | undefined {
+  if (!buildPath) return undefined;
+  if (/^https?:\/\//i.test(buildPath) || buildPath.startsWith("/"))
+    return buildPath;
+  throw new Error(
+    `The RobotActions provider needs buildPath to be an http(s) URL or an absolute path on the grid host (got "${buildPath}"). ` +
+      `Upload the build to your artifact store (CI artifact, S3 presigned URL, …) and use that URL.`,
+  );
 }
 
 export function defaultTestSuite(projectName: string): string {
@@ -94,7 +97,10 @@ export function defaultTestSuite(projectName: string): string {
 export type CapabilityInput = {
   platform: Platform;
   device: RobotActionsConfig;
-  buildUrl: string;
+  /** From validateBuildPath: undefined for a device-level session. */
+  buildUrl?: string;
+  /** Launched (and reset between sessions) when there is no build to install. */
+  appBundleId?: string;
   projectName: string;
 };
 
@@ -102,26 +108,43 @@ export function buildCapabilities({
   platform,
   device,
   buildUrl,
+  appBundleId,
   projectName,
 }: CapabilityInput): Record<string, unknown> {
+  const isAndroid = platform == Platform.ANDROID;
   const caps: Record<string, unknown> = {
-    platformName: platform,
-    "appium:automationName":
-      platform == Platform.ANDROID ? "uiautomator2" : "xcuitest",
-    "appium:app": buildUrl,
+    // The grid keys its tvOS routing on the literal "tvOS" (see its docs);
+    // Appium accepts platformName case-insensitively, so the enum values
+    // work as-is for the other two.
+    platformName: platform == Platform.TVOS ? "tvOS" : platform,
+    "appium:automationName": isAndroid ? "uiautomator2" : "xcuitest",
     "appium:autoGrantPermissions": true,
     "appium:autoAcceptAlerts": true,
-    "appium:fullReset": true,
     "appium:settings[snapshotMaxDepth]": 62,
     "ra:testsuite": device.testSuite ?? defaultTestSuite(projectName),
   };
-  if (platform == Platform.ANDROID) {
-    // Accept whatever activity the app lands on — onboarding/splash flows
-    // redirect before the manifest's launcher activity is ever resumed, and
-    // UiAutomator2 would otherwise fail with "MainActivity never started".
-    caps["appium:appWaitActivity"] = "*";
+  if (buildUrl) {
+    // A fresh install per session, as the cloud providers do.
+    caps["appium:app"] = buildUrl;
+    caps["appium:fullReset"] = true;
+    if (isAndroid) {
+      // Accept whatever activity the app lands on — onboarding/splash flows
+      // redirect before the manifest's launcher activity is ever resumed, and
+      // UiAutomator2 would otherwise fail with "MainActivity never started".
+      caps["appium:appWaitActivity"] = "*";
+    }
+  } else {
+    // Nothing to install: leave the device's state alone. With a bundle id
+    // the driver launches that (preinstalled) app; without one the session is
+    // device-level and the test picks what to open.
+    caps["appium:noReset"] = true;
+    if (appBundleId) {
+      caps[isAndroid ? "appium:appPackage" : "appium:bundleId"] = appBundleId;
+      if (isAndroid) caps["appium:appWaitActivity"] = "*";
+    }
   }
   if (device.udid) caps["appium:udid"] = device.udid;
+  if (device.deviceClass) caps["appium:deviceClass"] = device.deviceClass;
   if (device.name) caps["appium:deviceName"] = device.name;
   if (device.osVersion) caps["appium:platformVersion"] = device.osVersion;
   if (device.orientation) {

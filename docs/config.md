@@ -52,9 +52,19 @@ Session videos are downloaded from the grid and attached to the Playwright repor
 `ROBOTACTIONS_API_URL` only if recordings should be fetched from a different host than the
 grid URL (e.g. the grid's LAN-only history API on port 3001).
 
-RobotActions requires `appBundleId` to be set, and `buildPath` must be an `http(s)://` URL the
-grid can download the build from. `udid`, `osVersion`, `orientation`, `testSuite` and
-`capabilities` (extra Appium capabilities) are optional.
+Everything else is optional. `buildPath`, when set, must be an `http(s)://` URL or an absolute
+path on the grid host — the grid's devices fetch and install it themselves. Without it the
+session is device-level: nothing installed, and with `appBundleId` set the driver launches that
+preinstalled app. `udid`, `osVersion`, `deviceClass` (`"TV"` for an Android TV / Chromecast,
+`"iPad"`, `"Phone"`…), `orientation`, `testSuite` and `capabilities` (extra Appium capabilities,
+including the grid's `ra:*` reporting caps) narrow the request.
+
+Apple TV: `platform: Platform.TVOS`. Same XCUITest driver as iOS, but there is no touch
+surface — navigate focus with `getByText(...).tap()` (focuses then selects) or the remote via
+`deviceProvider.client.executeScript("mobile: pressButton", [{ name: "down" }])`.
+
+A run with no `--project` sets up every project (the original restriction only protected the
+local providers, which share one Appium port).
 
 ### Android Emulator
 

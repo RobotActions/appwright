@@ -154,11 +154,13 @@ npm install github:RobotActions/appwright
     platform: Platform.ANDROID,
     device: {
       provider: "robotactions",
-      // Optional: pin a device by UDID and/or OS version; omit to take any free device
+      // Optional: pin a device by UDID / OS version / class ("TV" gets an
+      // Android TV); omit them all to take any free device
       udid: "R5CT30XXXXX",
       osVersion: "14",
     },
-    // Must be an http(s) URL — the grid's devices download the build themselves
+    // An http(s) URL or a path on the grid host — the grid's devices install it.
+    // Leave it out for a device-level session or a preinstalled app.
     buildPath: "https://ci.example.com/artifacts/app-release.apk",
     appBundleId: "com.example.app",
   },
