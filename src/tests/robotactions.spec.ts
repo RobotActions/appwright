@@ -23,6 +23,12 @@ test("readGridEnv normalizes urls and rejects non-http", () => {
   });
   expect(env.gridUrl).toBe("https://grid.robotactions.com");
   expect(env.apiUrl).toBe("http://192.168.2.32:3001");
+  expect(
+    readGridEnv({
+      ROBOTACTIONS_GRID_URL: "https://grid.robotactions.com/",
+      ROBOTACTIONS_TOKEN: "t",
+    }).apiUrl,
+  ).toBe("https://grid.robotactions.com");
   expect(() =>
     readGridEnv({ ROBOTACTIONS_GRID_URL: "ws://x", ROBOTACTIONS_TOKEN: "t" }),
   ).toThrow(/http\(s\)/);

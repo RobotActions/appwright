@@ -16,6 +16,7 @@
     "lint": "eslint .",
     "test": "vitest --config ./src/tests/vitest.config.mts",
     "build": "tsc --build",
+    "prepare": "tsc --build",
     "changeset": "changeset",
     "clean": "tsc --build --clean",
     "release": "changeset publish",

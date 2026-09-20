@@ -48,10 +48,9 @@ These environment variables are required for RobotActions
 - ROBOTACTIONS_GRID_URL — the grid URL, e.g. `https://grid.robotactions.com`
 - ROBOTACTIONS_TOKEN — an access token from the RobotActions dashboard
 
-Optional
-
-- ROBOTACTIONS_API_URL — the grid's HTTP API URL (port 3001). When set, session videos are
-  downloaded and attached to the Playwright report.
+Session videos are downloaded from the grid and attached to the Playwright report. Set
+`ROBOTACTIONS_API_URL` only if recordings should be fetched from a different host than the
+grid URL (e.g. the grid's LAN-only history API on port 3001).
 
 RobotActions requires `appBundleId` to be set, and `buildPath` must be an `http(s)://` URL the
 grid can download the build from. `udid`, `osVersion`, `orientation`, `testSuite` and

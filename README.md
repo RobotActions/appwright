@@ -138,8 +138,14 @@ the provider in your config.
 #### Run tests on RobotActions
 
 Appwright supports [RobotActions](https://robotactions.com) real-device grids out of the box.
-Set `ROBOTACTIONS_GRID_URL` and `ROBOTACTIONS_TOKEN` in your environment, host the build
-somewhere the grid can download it, and configure the provider in your config.
+Install this fork, set `ROBOTACTIONS_GRID_URL` and `ROBOTACTIONS_TOKEN` in your environment,
+host the build somewhere the grid can download it, and configure the provider in your config.
+Test names and pass/fail land on the grid dashboard, and each session's recording is attached
+to the Playwright report.
+
+```sh
+npm install github:RobotActions/appwright
+```
 
 ```ts
 {
