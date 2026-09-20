@@ -48,7 +48,10 @@ export const test = base.extend<TestLevelFixtures, WorkerLevelFixtures>({
       type: "sessionId",
       description: deviceProvider.sessionId,
     });
-    await deviceProvider.syncTestDetails?.({ name: testInfo.title });
+    await deviceProvider.syncTestDetails?.({
+      name: testInfo.title,
+      testId: testInfo.testId,
+    });
     await use(device);
     await device.close();
     if (

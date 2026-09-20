@@ -41,14 +41,21 @@ export interface DeviceProvider {
     status?: string;
     reason?: string;
     name?: string;
+    /** Playwright's stable per-test id, so a dashboard can trend one test across runs. */
+    testId?: string;
   }) => Promise<void>;
 }
 
 export type AppwrightConfig = {
   platform: Platform;
   device: DeviceConfig;
-  buildPath: string;
-  appBundleId: string;
+  /**
+   * The build under test. Required by the cloud providers; a grid provider can
+   * run a device-level session without one (nothing installed, nothing launched).
+   */
+  buildPath?: string;
+  /** App id, for activate/terminate without an argument and iOS clipboard reads. */
+  appBundleId?: string;
   // TODO: use expect timeout from playwright config
   expectTimeout: number;
 };
@@ -145,6 +152,14 @@ export type RobotActionsConfig = {
   udid?: string;
 
   /**
+   * Device class advertised by the grid — "Phone", "Tablet", "TV" on Android;
+   * "iPhone", "iPad" on iOS. Sent as `appium:deviceClass`, so
+   * `{ platform: Platform.ANDROID, device: { deviceClass: "TV" } }` gets an
+   * Android TV / Chromecast and a phone suite can exclude tablets.
+   */
+  deviceClass?: string;
+
+  /**
    * The operating system version of the device, e.g. "14", "17.5".
    * When omitted, any OS version is accepted.
    */
@@ -211,6 +226,13 @@ export type EmulatorConfig = {
 export enum Platform {
   ANDROID = "android",
   IOS = "ios",
+  /**
+   * Apple TV. XCUITest like iOS, but no touch surface — navigate focus with
+   * `findElement` + `click` or the remote (`mobile: pressButton`). Only the
+   * `robotactions` provider serves it; `Device.getPlatform()` reports IOS for
+   * a tvOS session because every Device behaviour it gates is the iOS one.
+   */
+  TVOS = "tvos",
 }
 
 export enum DeviceOrientation {

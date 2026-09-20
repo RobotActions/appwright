@@ -16,16 +16,26 @@ async function globalSetup(config: FullConfig<AppwrightConfig>) {
     }
   });
 
-  if (projects.length == 0) {
-    // Capability to run all projects is not supported currently
-    // This will be added after support for using same appium server for multiple projects is added
+  // No --project: set up every project. The original restriction guarded the
+  // local providers, which all spawn one Appium on one port; a remote provider
+  // has nothing to collide, and `npx playwright test` with no project filter
+  // is the normal way to run a multi-platform suite.
+  const selected = projects.length
+    ? config.projects.filter((p) => projects.includes(p.name))
+    : config.projects;
+  const localProviders = new Set(["emulator", "local-device"]);
+  if (
+    projects.length == 0 &&
+    selected.filter((p) => localProviders.has(String(p.use.device?.provider)))
+      .length > 1
+  ) {
     throw new Error(
-      "Capability to run all projects is not supported. Please specify the project name with --project flag.",
+      "Running several emulator/local-device projects at once is not supported. Please specify the project name with --project flag.",
     );
   }
 
   for (let i = 0; i < config.projects.length; i++) {
-    if (projects.includes(config.projects[i]!.name)) {
+    if (selected.includes(config.projects[i]!)) {
       const provider = createDeviceProvider(config.projects[i]!);
       await provider.globalSetup?.();
     }
