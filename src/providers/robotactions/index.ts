@@ -12,7 +12,6 @@ import { FullProject } from "@playwright/test";
 import { Device } from "../../device";
 import { logger } from "../../logger";
 import {
-  API_URL_ENV,
   authHeaders,
   buildCapabilities,
   readGridEnv,
@@ -144,12 +143,6 @@ export class RobotActionsDeviceProvider implements DeviceProvider {
       env = readGridEnv();
     } catch (e) {
       logger.warn(`RobotActions: skipping video download:`, e);
-      return null;
-    }
-    if (!env.apiUrl) {
-      logger.warn(
-        `RobotActions: ${API_URL_ENV} is not set; skipping video download for session ${sessionId}.`,
-      );
       return null;
     }
     const { apiUrl, token } = env;

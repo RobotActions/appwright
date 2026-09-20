@@ -10,10 +10,11 @@ export type GridEnv = {
   /** JWT issued by the RobotActions dashboard. */
   token: string;
   /**
-   * Base URL of the grid's HTTP API (session history + video download).
-   * Optional — when unset, video attachments are skipped.
+   * Base URL used for video download. The grid proxy serves the video routes
+   * itself, so this is the grid URL unless `ROBOTACTIONS_API_URL` points
+   * somewhere else (e.g. a LAN-only history API on port 3001).
    */
-  apiUrl?: string;
+  apiUrl: string;
 };
 
 function normalizeUrl(raw: string, envName: string): string {
@@ -38,11 +39,12 @@ export function readGridEnv(env = process.env): GridEnv {
         `Set ${GRID_URL_ENV} to your grid URL (e.g. https://grid.robotactions.com) and ${TOKEN_ENV} to a token from the dashboard.`,
     );
   }
+  const normalizedGridUrl = normalizeUrl(gridUrl, GRID_URL_ENV);
   const apiUrl = env[API_URL_ENV];
   return {
-    gridUrl: normalizeUrl(gridUrl, GRID_URL_ENV),
+    gridUrl: normalizedGridUrl,
     token,
-    apiUrl: apiUrl ? normalizeUrl(apiUrl, API_URL_ENV) : undefined,
+    apiUrl: apiUrl ? normalizeUrl(apiUrl, API_URL_ENV) : normalizedGridUrl,
   };
 }
 
