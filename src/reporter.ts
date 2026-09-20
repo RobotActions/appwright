@@ -70,15 +70,13 @@ class VideoDownloader implements Reporter {
       const workerDownload = waitFiveSeconds()
         .then(() => getWorkerInfo(workerIndex))
         .then(async (workerInfo) => {
-          if (!workerInfo) {
-            throw new Error(`Worker info not found for idx: ${workerIndex}`);
-          }
+          // A worker that never ran `persistentDevice` has no session of its
+          // own — that is every worker of a plain `device` suite, and the
+          // second reporter instance's view of one whose annotations the first
+          // already consumed. Not an error; there is just nothing to attach.
+          if (!workerInfo) return;
           const { providerName, sessionId, endTime } = workerInfo;
-          if (!providerName || !sessionId) {
-            throw new Error(
-              `Provider name or session id not found for worker: ${workerIndex}`,
-            );
-          }
+          if (!providerName || !sessionId) return;
           if (!this.providerSupportsVideo(providerName)) {
             return; // Nothing to do here
           }
