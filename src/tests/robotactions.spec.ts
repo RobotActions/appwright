@@ -55,6 +55,12 @@ test("validateBuildPath accepts urls, grid-host paths, or nothing", () => {
   );
   expect(validateBuildPath("/srv/builds/app.apk")).toBe("/srv/builds/app.apk");
   expect(validateBuildPath(undefined)).toBeUndefined();
+  expect(
+    validateBuildPath("ra-app://8eb08fc5-7a19-4037-bafe-c1437d855340"),
+  ).toBe("ra-app://8eb08fc5-7a19-4037-bafe-c1437d855340");
+  expect(() => validateBuildPath("ra-app://wikipedia")).toThrow(
+    /not a valid App Library reference/,
+  );
   expect(() => validateBuildPath("app-release.apk")).toThrow(/http\(s\) URL/);
 });
 

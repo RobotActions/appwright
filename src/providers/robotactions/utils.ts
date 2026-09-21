@@ -73,20 +73,31 @@ export function toWebDriverTarget(gridUrl: string): WebDriverTarget {
  *
  * A grid session needs no app: with `buildPath` unset the device is handed
  * out as-is (`appium:noReset`) — the smoke a fresh project runs, or a suite
- * that drives a preinstalled app by `appBundleId`. When it is set, the grid's
- * Appium nodes fetch it themselves, so it must be somewhere they can reach:
- * an http(s) URL, or an absolute path on the grid host. A path on the test
- * runner's disk is not visible to them.
+ * that drives a preinstalled app by `appBundleId`. When it is set, the grid
+ * fetches it, so it must be somewhere the grid can reach:
+ *
+ *   - `ra-app://<id>` — a build in the RobotActions App Library, by upload id.
+ *     The grid downloads it with this session's token, so nothing is hosted.
+ *   - an http(s) URL the grid's devices can download
+ *   - an absolute path on the grid host
+ *
+ * A path on the test runner's disk is not visible to the grid.
  */
 export function validateBuildPath(
   buildPath: string | undefined,
 ): string | undefined {
   if (!buildPath) return undefined;
+  if (/^ra-app:\/\/[0-9a-f-]{36}\/?$/i.test(buildPath)) return buildPath;
+  if (/^ra-app:\/\//i.test(buildPath)) {
+    throw new Error(
+      `buildPath "${buildPath}" is not a valid App Library reference — expected ra-app://<upload id> (the id from the Apps page, app_list, or import-url).`,
+    );
+  }
   if (/^https?:\/\//i.test(buildPath) || buildPath.startsWith("/"))
     return buildPath;
   throw new Error(
-    `The RobotActions provider needs buildPath to be an http(s) URL or an absolute path on the grid host (got "${buildPath}"). ` +
-      `Upload the build to your artifact store (CI artifact, S3 presigned URL, …) and use that URL.`,
+    `The RobotActions provider needs buildPath to be an App Library reference (ra-app://<id>), an http(s) URL, or an absolute path on the grid host (got "${buildPath}"). ` +
+      `Upload the build to your App Library (dashboard → Apps, or POST /apps/import-url) and use ra-app://<id>.`,
   );
 }
 

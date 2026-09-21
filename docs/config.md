@@ -52,8 +52,10 @@ Session videos are downloaded from the grid and attached to the Playwright repor
 `ROBOTACTIONS_API_URL` only if recordings should be fetched from a different host than the
 grid URL (e.g. the grid's LAN-only history API on port 3001).
 
-Everything else is optional. `buildPath`, when set, must be an `http(s)://` URL or an absolute
-path on the grid host — the grid's devices fetch and install it themselves. Without it the
+Everything else is optional. `buildPath`, when set, is one of: `ra-app://<id>` — a build in your
+RobotActions App Library (dashboard → Apps, `POST /apps/import-url`, or the `app_upload` MCP
+tool), fetched by the grid with this session's token so nothing needs hosting; an `http(s)://`
+URL the grid's devices can download; or an absolute path on the grid host. Without it the
 session is device-level: nothing installed, and with `appBundleId` set the driver launches that
 preinstalled app. `udid`, `osVersion`, `deviceClass` (`"TV"` for an Android TV / Chromecast,
 `"iPad"`, `"Phone"`…), `orientation`, `testSuite` and `capabilities` (extra Appium capabilities,

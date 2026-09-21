@@ -159,9 +159,10 @@ npm install github:RobotActions/appwright
       udid: "R5CT30XXXXX",
       osVersion: "14",
     },
-    // An http(s) URL or a path on the grid host — the grid's devices install it.
+    // A build from your App Library ("ra-app://<id>"), an http(s) URL, or a
+    // path on the grid host — the grid installs it.
     // Leave it out for a device-level session or a preinstalled app.
-    buildPath: "https://ci.example.com/artifacts/app-release.apk",
+    buildPath: "ra-app://8eb08fc5-7a19-4037-bafe-c1437d855340",
     appBundleId: "com.example.app",
   },
 },
