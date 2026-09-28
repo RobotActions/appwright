@@ -30,6 +30,38 @@ type WorkerLevelFixtures = {
   persistentDevice: Device;
 };
 
+/**
+ * Reports the final test status to the provider, then closes the device.
+ *
+ * Order matters: a grid provider (e.g. RobotActions) captures its failure
+ * snapshot (page source, screenshot) when it receives a failed status, and
+ * can only do that while the session is still alive. Reporting after
+ * `device.close()` means the session is already gone by the time the grid
+ * sees the failure, so the snapshot is always null.
+ *
+ * `device.close()` stays in `finally` so an error while reporting (e.g.
+ * browserstack's `syncTestDetails` throws on a non-OK response) can never
+ * leak the device or a stray local Appium server.
+ */
+export async function reportStatusThenCloseDevice(
+  deviceProvider: DeviceProvider,
+  device: Device,
+  details: { name: string; status?: string; reason?: string },
+  deviceProviderName: string | undefined,
+): Promise<void> {
+  try {
+    await deviceProvider.syncTestDetails?.(details);
+  } finally {
+    await device.close();
+    if (
+      deviceProviderName === "emulator" ||
+      deviceProviderName === "local-device"
+    ) {
+      await stopAppiumServer();
+    }
+  }
+}
+
 export const test = base.extend<TestLevelFixtures, WorkerLevelFixtures>({
   deviceProvider: async ({}, use, testInfo) => {
     const deviceProvider = createDeviceProvider(testInfo.project);
@@ -53,18 +85,16 @@ export const test = base.extend<TestLevelFixtures, WorkerLevelFixtures>({
       testId: testInfo.testId,
     });
     await use(device);
-    await device.close();
-    if (
-      deviceProviderName === "emulator" ||
-      deviceProviderName === "local-device"
-    ) {
-      await stopAppiumServer();
-    }
-    await deviceProvider.syncTestDetails?.({
-      name: testInfo.title,
-      status: testInfo.status,
-      reason: testInfo.error?.message,
-    });
+    await reportStatusThenCloseDevice(
+      deviceProvider,
+      device,
+      {
+        name: testInfo.title,
+        status: testInfo.status,
+        reason: testInfo.error?.message,
+      },
+      deviceProviderName,
+    );
   },
   persistentDevice: [
     async ({}, use, workerInfo) => {
